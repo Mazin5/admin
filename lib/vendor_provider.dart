@@ -18,8 +18,7 @@ class VendorProvider with ChangeNotifier {
       // Fetch vendors from Firestore with status 'pending' or 'verified'
       QuerySnapshot snapshot = await FirebaseFirestore.instance
           .collection('vendors')
-          .where('status', whereIn: ['pending', 'verified'])
-          .get();
+          .where('status', whereIn: ['pending', 'verified']).get();
 
       print('Vendors fetched: ${snapshot.docs.length}');
 
@@ -28,12 +27,16 @@ class VendorProvider with ChangeNotifier {
         Map<String, dynamic> vendorData = doc.data() as Map<String, dynamic>;
 
         // Fetch service details from Realtime Database
-        DatabaseReference serviceRef = FirebaseDatabase.instance.reference().child(vendorData['serviceType']).child(uid);
+        DatabaseReference serviceRef = FirebaseDatabase.instance
+            .reference()
+            .child(vendorData['serviceType'])
+            .child(uid);
         DatabaseEvent event = await serviceRef.once();
         DataSnapshot serviceSnapshot = event.snapshot;
 
         if (serviceSnapshot.value != null) {
-          Map<String, dynamic> serviceData = Map<String, dynamic>.from(serviceSnapshot.value as Map<dynamic, dynamic>);
+          Map<String, dynamic> serviceData = Map<String, dynamic>.from(
+              serviceSnapshot.value as Map<dynamic, dynamic>);
           vendors.add({
             'uid': uid,
             'vendorData': vendorData,
@@ -54,15 +57,20 @@ class VendorProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> updateVendorStatus(String uid, String serviceType, String newStatus) async {
+  Future<void> updateVendorStatus(
+      String uid, String serviceType, String newStatus) async {
     try {
       // Update status in Firestore
-      await FirebaseFirestore.instance.collection('vendors').doc(uid).update({'status': newStatus});
-      
+      await FirebaseFirestore.instance
+          .collection('vendors')
+          .doc(uid)
+          .update({'status': newStatus});
+
       // Update status in Realtime Database
-      DatabaseReference serviceRef = FirebaseDatabase.instance.reference().child(serviceType).child(uid);
+      DatabaseReference serviceRef =
+          FirebaseDatabase.instance.reference().child(serviceType).child(uid);
       await serviceRef.update({'status': newStatus});
-      
+
       print('Vendor status updated to $newStatus for UID: $uid');
 
       await fetchVendors();

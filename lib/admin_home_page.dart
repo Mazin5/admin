@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'admin_login_page.dart';
 import 'manage_vendor_service.dart';
 import 'manage_user_reservations.dart';
+import 'view_payments_screen.dart';
+import 'archived_reservations_screen.dart';
 
 class AdminHomePage extends StatefulWidget {
   @override
@@ -11,11 +13,6 @@ class AdminHomePage extends StatefulWidget {
 
 class _AdminHomePageState extends State<AdminHomePage> {
   int _selectedIndex = 0;
-
-  static List<Widget> _widgetOptions = <Widget>[
-    ManageVendorService(),
-    ManageUserReservations(),
-  ];
 
   void _onItemTapped(int index) {
     setState(() {
@@ -41,7 +38,13 @@ class _AdminHomePageState extends State<AdminHomePage> {
         ],
       ),
       body: Center(
-        child: _widgetOptions.elementAt(_selectedIndex),
+        child: _selectedIndex == 0
+            ? ManageVendorService()
+            : _selectedIndex == 1
+                ? ManageUserReservations()
+                : _selectedIndex == 2
+                    ? ViewPaymentsScreen()
+                    : ArchivedReservationsScreen(),
       ),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
@@ -52,6 +55,14 @@ class _AdminHomePageState extends State<AdminHomePage> {
           BottomNavigationBarItem(
             icon: Icon(Icons.book),
             label: 'Manage Reservations',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.payment),
+            label: 'View Payments',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.archive),
+            label: 'Archived Reservations',
           ),
         ],
         currentIndex: _selectedIndex,

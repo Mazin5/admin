@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'admin_home_page.dart';
 
 class AdminLoginPage extends StatefulWidget {
@@ -9,21 +10,21 @@ class AdminLoginPage extends StatefulWidget {
 }
 
 class _AdminLoginPageState extends State<AdminLoginPage> {
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  String _email = '';
-  String _password = '';
-  bool _loading = false;
+  bool _isLoading = false;
 
   Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
-        _loading = true;
+        _isLoading = true;
       });
 
       try {
         UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-          email: _email,
-          password: _password,
+          email: _emailController.text,
+          password: _passwordController.text,
         );
 
         DocumentSnapshot adminDoc = await FirebaseFirestore.instance.collection('admins').doc(userCredential.user!.uid).get();
@@ -39,49 +40,105 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Login failed: $e')));
       } finally {
         setState(() {
-          _loading = false;
+          _isLoading = false;
         });
       }
     }
   }
 
+  final InputDecoration textFieldDecoration = InputDecoration(
+    labelStyle: TextStyle(color: Colors.white), // Set label text color to white
+    hintStyle: TextStyle(color: Colors.white),  // Set hint text color to white
+    enabledBorder: OutlineInputBorder(
+      borderSide: BorderSide(color: Colors.white), // Set border color to white
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderSide: BorderSide(color: Colors.white), // Set border color to white when focused
+    ),
+    errorStyle: TextStyle(color: Colors.red), // Optionally set error text color
+  );
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String labelText,
+    required bool obscureText,
+    required String? Function(String?) validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      decoration: textFieldDecoration.copyWith(labelText: labelText),
+      obscureText: obscureText,
+      style: TextStyle(color: Colors.white), // Set input text color to white
+      validator: validator,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Admin Login'),
-      ),
-      body: Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: <Widget>[
-              TextFormField(
-                decoration: InputDecoration(labelText: 'Email'),
-                validator: (value) => value!.isEmpty ? 'Please enter an email' : null,
-                onChanged: (value) {
-                  setState(() {
-                    _email = value;
-                  });
-                },
+      backgroundColor: Color.fromARGB(154, 168, 33, 53),
+      body: Center(
+        child: SingleChildScrollView(
+          child: Container(
+            padding: const EdgeInsets.all(16.0),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Image.network(
+                    'https://i.ibb.co/P5xhDMx/admin.png',
+                    width: 200,
+                    height: 200,
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    "WELCOME BACK",
+                    style: GoogleFonts.roboto(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    "LOGIN",
+                    style: GoogleFonts.roboto(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  SizedBox(height: 32),
+                  _buildTextField(
+                    controller: _emailController,
+                    labelText: 'Email',
+                    obscureText: false,
+                    validator: (value) => value!.isEmpty ? 'Please enter an email' : null,
+                  ),
+                  SizedBox(height: 16),
+                  _buildTextField(
+                    controller: _passwordController,
+                    labelText: 'Password',
+                    obscureText: true,
+                    validator: (value) => value!.isEmpty ? 'Please enter a password' : null,
+                  ),
+                  SizedBox(height: 32),
+                  _isLoading
+                      ? Center(child: CircularProgressIndicator())
+                      : ElevatedButton(
+                          onPressed: _login,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                            textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                          child: Text('Login'),
+                        ),
+                ],
               ),
-              TextFormField(
-                decoration: InputDecoration(labelText: 'Password'),
-                validator: (value) => value!.isEmpty ? 'Please enter a password' : null,
-                obscureText: true,
-                onChanged: (value) {
-                  setState(() {
-                    _password = value;
-                  });
-                },
-              ),
-              SizedBox(height: 20.0),
-              _loading ? CircularProgressIndicator() : ElevatedButton(
-                onPressed: _login,
-                child: Text('Login'),
-              ),
-            ],
+            ),
           ),
         ),
       ),

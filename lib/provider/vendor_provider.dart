@@ -21,8 +21,6 @@ class VendorProvider with ChangeNotifier {
           .where('status', whereIn: ['pending', 'verified'])
           .get();
 
-      print('Vendors fetched: ${snapshot.docs.length}');
-
       for (var doc in snapshot.docs) {
         String uid = doc.id;
         Map<String, dynamic> vendorData = doc.data() as Map<String, dynamic>;
@@ -39,11 +37,6 @@ class VendorProvider with ChangeNotifier {
             'vendorData': vendorData,
             'serviceData': serviceData,
           });
-
-          print('Vendor data: $vendorData');
-          print('Service data: $serviceData');
-        } else {
-          print('No service data found for UID: $uid');
         }
       }
     } catch (e) {
@@ -58,14 +51,13 @@ class VendorProvider with ChangeNotifier {
     try {
       // Update status in Firestore
       await FirebaseFirestore.instance.collection('vendors').doc(uid).update({'status': newStatus});
-      
+
       // Update status in Realtime Database
       DatabaseReference serviceRef = FirebaseDatabase.instance.reference().child(serviceType).child(uid);
       await serviceRef.update({'status': newStatus});
       
-      print('Vendor status updated to $newStatus for UID: $uid');
-
-      await fetchVendors();
+      // Refresh vendors list
+      fetchVendors();
     } catch (e) {
       print('Error updating vendor status: $e');
     }

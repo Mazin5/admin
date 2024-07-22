@@ -4,7 +4,6 @@ import 'admin_login_page.dart';
 import 'manage_vendor_service.dart';
 import 'manage_user_reservations.dart';
 import 'view_payments_screen.dart';
-import 'archived_reservations_screen.dart';
 
 class AdminHomePage extends StatefulWidget {
   @override
@@ -13,6 +12,13 @@ class AdminHomePage extends StatefulWidget {
 
 class _AdminHomePageState extends State<AdminHomePage> {
   int _selectedIndex = 0;
+
+  // Define a list of widget options for navigation
+  static List<Widget> _widgetOptions = <Widget>[
+    ManageVendorService(),
+    ManageUserReservations(),
+    ViewPaymentsScreen(),
+  ];
 
   void _onItemTapped(int index) {
     setState(() {
@@ -24,10 +30,10 @@ class _AdminHomePageState extends State<AdminHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Admin Home'),
+        title: Text('Admin Home'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: Icon(Icons.logout),
             onPressed: () async {
               await FirebaseAuth.instance.signOut();
               Navigator.of(context).pushReplacement(
@@ -38,16 +44,10 @@ class _AdminHomePageState extends State<AdminHomePage> {
         ],
       ),
       body: Center(
-        child: _selectedIndex == 0
-            ? ManageVendorService()
-            : _selectedIndex == 1
-                ? ManageUserReservations()
-                : _selectedIndex == 2
-                    ? ViewPaymentsScreen()
-                    : ArchivedReservationsScreen(),
+        child: _widgetOptions.elementAt(_selectedIndex),
       ),
       bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
+        items: <BottomNavigationBarItem>[
           BottomNavigationBarItem(
             icon: Icon(Icons.store),
             label: 'Manage Vendors',
@@ -60,13 +60,10 @@ class _AdminHomePageState extends State<AdminHomePage> {
             icon: Icon(Icons.payment),
             label: 'View Payments',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.archive),
-            label: 'Archived Reservations',
-          ),
         ],
         currentIndex: _selectedIndex,
-        selectedItemColor: Colors.blue,
+        unselectedItemColor: Colors.blue,
+        selectedItemColor: Colors.black,
         onTap: _onItemTapped,
       ),
     );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ViewPaymentsScreen extends StatefulWidget {
   @override
@@ -36,19 +37,24 @@ class _ViewPaymentsScreenState extends State<ViewPaymentsScreen> {
             Map<dynamic, dynamic> bookingsMap = Map<dynamic, dynamic>.from(bookingsSnapshot.value as Map);
             for (var key in bookingsMap.keys) {
               Map<String, dynamic> bookingData = Map<String, dynamic>.from(bookingsMap[key] as Map);
-              if (bookingData.containsKey('transactionCode') && bookingData.containsKey('receiptImageUrl') && bookingData['status'] != 'rejected' && bookingData['status'] != 'confirmed') {
+              if (bookingData.containsKey('transactionCode') &&
+                  bookingData.containsKey('receiptImageUrl') &&
+                  bookingData['status'] != 'rejected' &&
+                  bookingData['status'] != 'confirmed') {
                 bookingData['bookingId'] = key;
                 bookingData['venueId'] = venueId;
                 bookingData['venueName'] = venuesMap[venueId]['name']; // Assuming 'name' is the field for venue name
 
-                // Fetch user data from the 'users' node
-                DatabaseReference userRef = FirebaseDatabase.instance.reference().child('users').child(bookingData['userId']);
-                DatabaseEvent userEvent = await userRef.once();
-                DataSnapshot userSnapshot = userEvent.snapshot;
+                // Fetch user data from the 'users' collection
+                DocumentReference userRef = FirebaseFirestore.instance.collection('users').doc(bookingData['userId']);
+                DocumentSnapshot userSnapshot = await userRef.get();
 
-                if (userSnapshot.value != null) {
-                  Map<String, dynamic> userData = Map<String, dynamic>.from(userSnapshot.value as Map);
-                  bookingData['userFullName'] = userData['name']; // Assuming 'name' is the field for user's full name
+                if (userSnapshot.exists) {
+                  Map<String, dynamic> userData = userSnapshot.data() as Map<String, dynamic>;
+
+                  bookingData['lastname'] = userData['name'] + ' ' + userData['lastName'];
+                  bookingData['email'] = userData['email'];
+                  bookingData['phoneNumber'] = userData['phoneNumber'];
                 }
 
                 tempPayments.add(bookingData);
@@ -61,21 +67,15 @@ class _ViewPaymentsScreenState extends State<ViewPaymentsScreen> {
           _payments = tempPayments;
           _isLoading = false;
         });
-        print('Payments fetched: ${_payments.length}');
-        _payments.forEach((payment) {
-          print('Payment: $payment');
-        });
       } else {
         setState(() {
           _isLoading = false;
         });
-        print('No venues found');
       }
     } catch (error) {
       setState(() {
         _isLoading = false;
       });
-      print('Error fetching payments: $error');
     }
   }
 
@@ -181,9 +181,11 @@ class _ViewPaymentsScreenState extends State<ViewPaymentsScreen> {
                             SizedBox(height: 5),
                             Text('Date: ${payment['date']}', style: TextStyle(fontSize: 16)),
                             SizedBox(height: 5),
-                            Text('User Email: ${payment['userName']}', style: TextStyle(fontSize: 16)),
+                            Text('User Email: ${payment['email']}', style: TextStyle(fontSize: 16)),
                             SizedBox(height: 5),
-                            Text('User Full Name: ${payment['userFullName']}', style: TextStyle(fontSize: 16)),
+                            Text('User Full Name: ${payment['lastname']}', style: TextStyle(fontSize: 16)),
+                            SizedBox(height: 5),
+                            Text('Phone Number: ${payment['phoneNumber']}', style: TextStyle(fontSize: 16)),
                             SizedBox(height: 5),
                             Text('Transaction Code: ${payment['transactionCode']}', style: TextStyle(fontSize: 16)),
                             SizedBox(height: 5),

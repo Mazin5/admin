@@ -19,7 +19,7 @@ class _ManageUserReservationsState extends State<ManageUserReservations> {
   }
 
   Future<void> _fetchAllBookings() async {
-    DatabaseReference venuesRef = FirebaseDatabase.instance.reference().child('venue');
+    DatabaseReference venuesRef = FirebaseDatabase.instance.ref().child('venue');
 
     try {
       DatabaseEvent venuesEvent = await venuesRef.once();
@@ -74,7 +74,7 @@ class _ManageUserReservationsState extends State<ManageUserReservations> {
   }
 
   Future<void> _updateBookingStatus(String venueId, String bookingId, String newStatus) async {
-    DatabaseReference bookingRef = FirebaseDatabase.instance.reference().child('venue').child(venueId).child('bookings').child(bookingId);
+    DatabaseReference bookingRef = FirebaseDatabase.instance.ref().child('venue').child(venueId).child('bookings').child(bookingId);
     await bookingRef.update({'status': newStatus});
     _fetchAllBookings();
   }

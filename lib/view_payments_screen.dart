@@ -25,7 +25,7 @@ class _ViewPaymentsScreenState extends State<ViewPaymentsScreen> {
 
       for (String table in tables) {
         DatabaseReference tableRef =
-            FirebaseDatabase.instance.reference().child(table);
+            FirebaseDatabase.instance.ref().child(table);
         DatabaseEvent tableEvent = await tableRef.once();
         DataSnapshot tableSnapshot = tableEvent.snapshot;
 
@@ -98,7 +98,7 @@ class _ViewPaymentsScreenState extends State<ViewPaymentsScreen> {
       String entityType, String entityId, String bookingId, String newStatus,
       {String? rejectionReason, String? date}) async {
     DatabaseReference bookingRef = FirebaseDatabase.instance
-        .reference()
+        .ref()
         .child(entityType)
         .child(entityId)
         .child('bookings')
@@ -114,7 +114,7 @@ class _ViewPaymentsScreenState extends State<ViewPaymentsScreen> {
 
     if (newStatus == 'rejected' && date != null) {
       DatabaseReference reservedRef = FirebaseDatabase.instance
-          .reference()
+          .ref()
           .child(entityType)
           .child(entityId)
           .child('reserved')

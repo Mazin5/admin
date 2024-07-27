@@ -18,7 +18,7 @@ class _ArchivedReservationsScreenState extends State<ArchivedReservationsScreen>
   }
 
   Future<void> _fetchArchivedReservations() async {
-    DatabaseReference archivesRef = FirebaseDatabase.instance.reference().child('archives');
+    DatabaseReference archivesRef = FirebaseDatabase.instance.ref().child('archives');
 
     try {
       DatabaseEvent archivesEvent = await archivesRef.once();

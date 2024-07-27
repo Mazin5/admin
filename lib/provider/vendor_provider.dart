@@ -26,7 +26,7 @@ class VendorProvider with ChangeNotifier {
         Map<String, dynamic> vendorData = doc.data() as Map<String, dynamic>;
 
         // Fetch service details from Realtime Database
-        DatabaseReference serviceRef = FirebaseDatabase.instance.reference().child(vendorData['serviceType']).child(uid);
+        DatabaseReference serviceRef = FirebaseDatabase.instance.ref().child(vendorData['serviceType']).child(uid);
         DatabaseEvent event = await serviceRef.once();
         DataSnapshot serviceSnapshot = event.snapshot;
 
@@ -53,7 +53,7 @@ class VendorProvider with ChangeNotifier {
       await FirebaseFirestore.instance.collection('vendors').doc(uid).update({'status': newStatus});
 
       // Update status in Realtime Database
-      DatabaseReference serviceRef = FirebaseDatabase.instance.reference().child(serviceType).child(uid);
+      DatabaseReference serviceRef = FirebaseDatabase.instance.ref().child(serviceType).child(uid);
       await serviceRef.update({'status': newStatus});
       
       // Refresh vendors list

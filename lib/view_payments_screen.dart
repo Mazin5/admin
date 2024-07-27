@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_database/firebase_database.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ViewPaymentsScreen extends StatefulWidget {
@@ -18,81 +17,75 @@ class _ViewPaymentsScreenState extends State<ViewPaymentsScreen> {
   }
 
   Future<void> _fetchAllPayments() async {
-    DatabaseReference venuesRef = FirebaseDatabase.instance.reference().child('venue');
+    final List<String> tables = ['venue', 'singer', 'decoration', 'meal'];
 
     try {
-      DatabaseEvent venuesEvent = await venuesRef.once();
-      DataSnapshot venuesSnapshot = venuesEvent.snapshot;
+      List<Map<String, dynamic>> tempPayments = [];
 
-      if (venuesSnapshot.value != null) {
-        Map<dynamic, dynamic> venuesMap = Map<dynamic, dynamic>.from(venuesSnapshot.value as Map);
-        List<Map<String, dynamic>> tempPayments = [];
+      for (String table in tables) {
+        QuerySnapshot tableSnapshot = await FirebaseFirestore.instance.collection(table).get();
 
-        for (var venueId in venuesMap.keys) {
-          DatabaseReference bookingsRef = venuesRef.child(venueId).child('bookings');
-          DatabaseEvent bookingsEvent = await bookingsRef.once();
-          DataSnapshot bookingsSnapshot = bookingsEvent.snapshot;
+        for (var entityDoc in tableSnapshot.docs) {
+          String entityId = entityDoc.id;
+          QuerySnapshot bookingsSnapshot = await entityDoc.reference.collection('bookings').get();
 
-          if (bookingsSnapshot.value != null) {
-            Map<dynamic, dynamic> bookingsMap = Map<dynamic, dynamic>.from(bookingsSnapshot.value as Map);
-            for (var key in bookingsMap.keys) {
-              Map<String, dynamic> bookingData = Map<String, dynamic>.from(bookingsMap[key] as Map);
-              if (bookingData.containsKey('transactionCode') &&
-                  bookingData.containsKey('receiptImageUrl') &&
-                  bookingData['status'] != 'rejected' &&
-                  bookingData['status'] != 'confirmed') {
-                bookingData['bookingId'] = key;
-                bookingData['venueId'] = venueId;
-                bookingData['venueName'] = venuesMap[venueId]['name']; // Assuming 'name' is the field for venue name
+          for (var bookingDoc in bookingsSnapshot.docs) {
+            Map<String, dynamic> bookingData = bookingDoc.data() as Map<String, dynamic>;
 
-                // Fetch user data from the 'users' collection
-                DocumentReference userRef = FirebaseFirestore.instance.collection('users').doc(bookingData['userId']);
-                DocumentSnapshot userSnapshot = await userRef.get();
+            if (bookingData.containsKey('transactionCode') &&
+                bookingData.containsKey('receiptImageUrl') &&
+                bookingData['status'] != 'rejected' &&
+                bookingData['status'] != 'confirmed') {
+              bookingData['bookingId'] = bookingDoc.id;
+              bookingData['entityId'] = entityId;
+              bookingData['entityType'] = table; // Add the type for identifying the table
+              bookingData['entityName'] = entityDoc['name']; // Assuming 'name' is the field for entity name
 
-                if (userSnapshot.exists) {
-                  Map<String, dynamic> userData = userSnapshot.data() as Map<String, dynamic>;
+              // Fetch user data from the 'users' collection
+              DocumentSnapshot userSnapshot = await FirebaseFirestore.instance.collection('users').doc(bookingData['userId']).get();
 
-                  bookingData['lastname'] = userData['name'] + ' ' + userData['lastName'];
-                  bookingData['email'] = userData['email'];
-                  bookingData['phoneNumber'] = userData['phoneNumber'];
-                }
+              if (userSnapshot.exists) {
+                Map<String, dynamic> userData = userSnapshot.data() as Map<String, dynamic>;
 
-                tempPayments.add(bookingData);
+                bookingData['lastname'] = userData['name'] + ' ' + userData['lastName'];
+                bookingData['email'] = userData['email'];
+                bookingData['phoneNumber'] = userData['phoneNumber'];
               }
+
+              tempPayments.add(bookingData);
             }
           }
         }
-
-        setState(() {
-          _payments = tempPayments;
-          _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _isLoading = false;
-        });
       }
+
+      setState(() {
+        _payments = tempPayments;
+        _isLoading = false;
+      });
     } catch (error) {
+      print('Error fetching payments: $error'); // Add logging for debugging
       setState(() {
         _isLoading = false;
       });
     }
   }
 
-  Future<void> _updateBookingStatus(String venueId, String bookingId, String newStatus, {String? rejectionReason}) async {
-    DatabaseReference bookingRef = FirebaseDatabase.instance.reference().child('venue').child(venueId).child('bookings').child(bookingId);
-    Map<String, dynamic> updateData = {'status': newStatus};
+  Future<void> _updateBookingStatus(
+      String entityType, String entityId, String bookingId, String newStatus,
+      {String? rejectionReason, String? date}) async {
+    DocumentReference bookingRef = FirebaseFirestore.instance.collection(entityType).doc(entityId).collection('bookings').doc(bookingId);
+    Map<String, dynamic> updateData = {
+      'status': newStatus,
+      if (newStatus == 'confirmed') 'archive_status': true
+    };
     if (rejectionReason != null) {
       updateData['rejectionReason'] = rejectionReason;
     }
     await bookingRef.update(updateData);
 
-    // Move to archive if confirmed
-    if (newStatus == 'confirmed') {
-      DatabaseReference archiveRef = FirebaseDatabase.instance.reference().child('archives').child(venueId).child(bookingId);
-      DataSnapshot snapshot = (await bookingRef.once()).snapshot;
-      await archiveRef.set(snapshot.value);
-      await bookingRef.remove();
+    if (newStatus == 'rejected' && date != null) {
+      DocumentReference reservedRef = FirebaseFirestore.instance.collection(entityType).doc(entityId).collection('reserved').doc(date);
+      await reservedRef.delete();
     }
 
     _fetchAllPayments();
@@ -117,8 +110,10 @@ class _ViewPaymentsScreenState extends State<ViewPaymentsScreen> {
     );
   }
 
-  Future<void> _showRejectionDialog(String venueId, String bookingId) async {
-    final TextEditingController rejectionReasonController = TextEditingController();
+  Future<void> _showRejectionDialog(
+      String entityType, String entityId, String bookingId, String date) async {
+    final TextEditingController rejectionReasonController =
+        TextEditingController();
 
     showDialog(
       context: context,
@@ -141,11 +136,14 @@ class _ViewPaymentsScreenState extends State<ViewPaymentsScreen> {
               onPressed: () async {
                 String rejectionReason = rejectionReasonController.text;
                 if (rejectionReason.isNotEmpty) {
-                  await _updateBookingStatus(venueId, bookingId, 'rejected', rejectionReason: rejectionReason);
+                  await _updateBookingStatus(
+                      entityType, entityId, bookingId, 'rejected',
+                      rejectionReason: rejectionReason, date: date);
                   Navigator.of(context).pop();
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Please enter a reason for rejection.')),
+                    SnackBar(
+                        content: Text('Please enter a reason for rejection.')),
                   );
                 }
               },
@@ -177,26 +175,41 @@ class _ViewPaymentsScreenState extends State<ViewPaymentsScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Venue: ${payment['venueName']}', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                            Text('Entity: ${payment['entityName']}',
+                                style: TextStyle(
+                                    fontSize: 18, fontWeight: FontWeight.bold)),
                             SizedBox(height: 5),
-                            Text('Date: ${payment['date']}', style: TextStyle(fontSize: 16)),
+                            Text('Entity Type: ${payment['entityType']}',
+                                style: TextStyle(fontSize: 16)),
                             SizedBox(height: 5),
-                            Text('User Email: ${payment['email']}', style: TextStyle(fontSize: 16)),
+                            Text('Date: ${payment['date']}',
+                                style: TextStyle(fontSize: 16)),
                             SizedBox(height: 5),
-                            Text('User Full Name: ${payment['lastname']}', style: TextStyle(fontSize: 16)),
+                            Text('User Email: ${payment['email']}',
+                                style: TextStyle(fontSize: 16)),
                             SizedBox(height: 5),
-                            Text('Phone Number: ${payment['phoneNumber']}', style: TextStyle(fontSize: 16)),
+                            Text('User Full Name: ${payment['lastname']}',
+                                style: TextStyle(fontSize: 16)),
                             SizedBox(height: 5),
-                            Text('Transaction Code: ${payment['transactionCode']}', style: TextStyle(fontSize: 16)),
+                            Text('Phone Number: ${payment['phoneNumber']}',
+                                style: TextStyle(fontSize: 16)),
                             SizedBox(height: 5),
-                            Text('Note: ${payment['note']}', style: TextStyle(fontSize: 16)),
+                            Text(
+                                'Transaction Code: ${payment['transactionCode']}',
+                                style: TextStyle(fontSize: 16)),
                             SizedBox(height: 5),
-                            Text('Status: ${payment['status']}', style: TextStyle(fontSize: 16)),
+                            Text('Note: ${payment['note']}',
+                                style: TextStyle(fontSize: 16)),
+                            SizedBox(height: 5),
+                            Text('Status: ${payment['status']}',
+                                style: TextStyle(fontSize: 16)),
                             SizedBox(height: 10),
                             payment['receiptImageUrl'] != null
                                 ? GestureDetector(
-                                    onTap: () => _showFullImage(context, payment['receiptImageUrl']),
-                                    child: Image.network(payment['receiptImageUrl']),
+                                    onTap: () => _showFullImage(
+                                        context, payment['receiptImageUrl']),
+                                    child: Image.network(
+                                        payment['receiptImageUrl']),
                                   )
                                 : Text('No receipt image available'),
                             SizedBox(height: 10),
@@ -205,13 +218,21 @@ class _ViewPaymentsScreenState extends State<ViewPaymentsScreen> {
                               children: [
                                 ElevatedButton(
                                   onPressed: () {
-                                    _updateBookingStatus(payment['venueId'], payment['bookingId'], 'confirmed');
+                                    _updateBookingStatus(
+                                        payment['entityType'],
+                                        payment['entityId'],
+                                        payment['bookingId'],
+                                        'confirmed');
                                   },
                                   child: Text('Confirm'),
                                 ),
                                 ElevatedButton(
                                   onPressed: () {
-                                    _showRejectionDialog(payment['venueId'], payment['bookingId']);
+                                    _showRejectionDialog(
+                                        payment['entityType'],
+                                        payment['entityId'],
+                                        payment['bookingId'],
+                                        payment['date']);
                                   },
                                   child: Text('Reject'),
                                 ),

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_database/firebase_database.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ArchivedReservationsScreen extends StatefulWidget {
@@ -18,68 +17,52 @@ class _ArchivedReservationsScreenState extends State<ArchivedReservationsScreen>
   }
 
   Future<void> _fetchArchivedReservations() async {
-    DatabaseReference archivesRef = FirebaseDatabase.instance.reference().child('archives');
-
     try {
-      DatabaseEvent archivesEvent = await archivesRef.once();
-      DataSnapshot archivesSnapshot = archivesEvent.snapshot;
+      List<Map<String, dynamic>> tempArchivedReservations = [];
+      QuerySnapshot archivesSnapshot = await FirebaseFirestore.instance.collection('archives').get();
 
-      if (archivesSnapshot.value != null) {
-        Map<dynamic, dynamic> archivesMap = Map<dynamic, dynamic>.from(archivesSnapshot.value as Map);
-        List<Map<String, dynamic>> tempArchivedReservations = [];
+      for (var venueDoc in archivesSnapshot.docs) {
+        String venueId = venueDoc.id;
+        QuerySnapshot venueArchivesSnapshot = await venueDoc.reference.collection('bookings').get();
 
-        for (var venueId in archivesMap.keys) {
-          DatabaseReference venueArchivesRef = archivesRef.child(venueId);
-          DatabaseEvent venueArchivesEvent = await venueArchivesRef.once();
-          DataSnapshot venueArchivesSnapshot = venueArchivesEvent.snapshot;
+        for (var bookingDoc in venueArchivesSnapshot.docs) {
+          Map<String, dynamic> archiveData = bookingDoc.data() as Map<String, dynamic>;
+          archiveData['bookingId'] = bookingDoc.id;
+          archiveData['venueId'] = venueId;
 
-          if (venueArchivesSnapshot.value != null) {
-            Map<dynamic, dynamic> venueArchivesMap = Map<dynamic, dynamic>.from(venueArchivesSnapshot.value as Map);
-            for (var key in venueArchivesMap.keys) {
-              Map<String, dynamic> archiveData = Map<String, dynamic>.from(venueArchivesMap[key] as Map);
-              archiveData['bookingId'] = key;
-              archiveData['venueId'] = venueId;
+          // Fetch user data from Firestore using the userId
+          DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(archiveData['userId']).get();
 
-              // Fetch user data from Firestore using the userId
-              DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(archiveData['userId']).get();
-
-              if (userDoc.exists) {
-                archiveData['userFullName'] = '${userDoc['name']} ${userDoc['lastName']}';
-                archiveData['userName'] = userDoc['email'];
-                archiveData['phoneNumber'] = userDoc['phoneNumber'];
-              } else {
-                archiveData['userFullName'] = 'Not Available';
-                archiveData['userName'] = 'Not Available';
-                archiveData['phoneNumber'] = 'Not Available';
-              }
-
-              // Fetch venue data from Firestore
-              DocumentSnapshot venueDoc = await FirebaseFirestore.instance.collection('vendors').doc(venueId).get();
-              if (venueDoc.exists) {
-                archiveData['name'] = venueDoc['name'] ?? 'No Name';
-              } else {
-                archiveData['name'] = 'No Name';
-              }
-
-              tempArchivedReservations.add(archiveData);
-            }
+          if (userDoc.exists) {
+            archiveData['userFullName'] = '${userDoc['name']} ${userDoc['lastName']}';
+            archiveData['userName'] = userDoc['email'];
+            archiveData['phoneNumber'] = userDoc['phoneNumber'];
+          } else {
+            archiveData['userFullName'] = 'Not Available';
+            archiveData['userName'] = 'Not Available';
+            archiveData['phoneNumber'] = 'Not Available';
           }
-        }
 
-        setState(() {
-          _archivedReservations = tempArchivedReservations;
-          _isLoading = false;
-        });
-        print('Archived reservations fetched: ${_archivedReservations.length}');
-        _archivedReservations.forEach((reservation) {
-          print('Archived reservation: $reservation');
-        });
-      } else {
-        setState(() {
-          _isLoading = false;
-        });
-        print('No archived reservations found');
+          // Fetch venue data from Firestore
+          DocumentSnapshot venueDocSnapshot = await FirebaseFirestore.instance.collection('vendors').doc(venueId).get();
+          if (venueDocSnapshot.exists) {
+            archiveData['name'] = venueDocSnapshot['name'] ?? 'No Name';
+          } else {
+            archiveData['name'] = 'No Name';
+          }
+
+          tempArchivedReservations.add(archiveData);
+        }
       }
+
+      setState(() {
+        _archivedReservations = tempArchivedReservations;
+        _isLoading = false;
+      });
+      print('Archived reservations fetched: ${_archivedReservations.length}');
+      _archivedReservations.forEach((reservation) {
+        print('Archived reservation: $reservation');
+      });
     } catch (error) {
       setState(() {
         _isLoading = false;

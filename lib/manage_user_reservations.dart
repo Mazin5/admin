@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_database/firebase_database.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'archived_reservations_screen.dart';
 
@@ -19,53 +18,35 @@ class _ManageUserReservationsState extends State<ManageUserReservations> {
   }
 
   Future<void> _fetchAllBookings() async {
-    DatabaseReference venuesRef = FirebaseDatabase.instance.reference().child('venue');
-
     try {
-      DatabaseEvent venuesEvent = await venuesRef.once();
-      DataSnapshot venuesSnapshot = venuesEvent.snapshot;
+      List<Map<String, dynamic>> tempBookings = [];
+      QuerySnapshot venuesSnapshot = await FirebaseFirestore.instance.collection('venue').get();
 
-      if (venuesSnapshot.value != null) {
-        Map<dynamic, dynamic> venuesMap = Map<dynamic, dynamic>.from(venuesSnapshot.value as Map);
-        List<Map<String, dynamic>> tempBookings = [];
+      for (var venueDoc in venuesSnapshot.docs) {
+        QuerySnapshot bookingsSnapshot = await venueDoc.reference.collection('bookings').get();
+        for (var bookingDoc in bookingsSnapshot.docs) {
+          Map<String, dynamic> bookingData = bookingDoc.data() as Map<String, dynamic>;
+          bookingData['bookingId'] = bookingDoc.id;
+          bookingData['venueId'] = venueDoc.id;
+          bookingData['venueName'] = venueDoc['name']; // Assuming 'name' is the field for venue name
 
-        for (var venueId in venuesMap.keys) {
-          DatabaseReference bookingsRef = venuesRef.child(venueId).child('bookings');
-          DatabaseEvent bookingsEvent = await bookingsRef.once();
-          DataSnapshot bookingsSnapshot = bookingsEvent.snapshot;
+          // Fetch user data from the 'users' collection in Firestore
+          DocumentSnapshot userSnapshot = await FirebaseFirestore.instance.collection('users').doc(bookingData['userId']).get();
 
-          if (bookingsSnapshot.value != null) {
-            Map<dynamic, dynamic> bookingsMap = Map<dynamic, dynamic>.from(bookingsSnapshot.value as Map);
-            for (var key in bookingsMap.keys) {
-              Map<String, dynamic> bookingData = Map<String, dynamic>.from(bookingsMap[key] as Map);
-              bookingData['bookingId'] = key;
-              bookingData['venueId'] = venueId;
-              bookingData['venueName'] = venuesMap[venueId]['name']; // Assuming 'name' is the field for venue name
-
-              // Fetch user data from the 'users' collection in Firestore
-              DocumentReference userRef = FirebaseFirestore.instance.collection('users').doc(bookingData['userId']);
-              DocumentSnapshot userSnapshot = await userRef.get();
-
-              if (userSnapshot.exists) {
-                Map<String, dynamic> userData = userSnapshot.data() as Map<String, dynamic>;
-                bookingData['userName'] = userData['email']; // Assuming 'email' is the field for user's email
-                bookingData['userFullName'] = userData['name']; // Assuming 'name' is the field for user's full name
-              }
-
-              tempBookings.add(bookingData);
-            }
+          if (userSnapshot.exists) {
+            Map<String, dynamic> userData = userSnapshot.data() as Map<String, dynamic>;
+            bookingData['userName'] = userData['email']; // Assuming 'email' is the field for user's email
+            bookingData['userFullName'] = userData['name']; // Assuming 'name' is the field for user's full name
           }
-        }
 
-        setState(() {
-          _bookings = tempBookings;
-          _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _isLoading = false;
-        });
+          tempBookings.add(bookingData);
+        }
       }
+
+      setState(() {
+        _bookings = tempBookings;
+        _isLoading = false;
+      });
     } catch (error) {
       setState(() {
         _isLoading = false;
@@ -74,8 +55,12 @@ class _ManageUserReservationsState extends State<ManageUserReservations> {
   }
 
   Future<void> _updateBookingStatus(String venueId, String bookingId, String newStatus) async {
-    DatabaseReference bookingRef = FirebaseDatabase.instance.reference().child('venue').child(venueId).child('bookings').child(bookingId);
-    await bookingRef.update({'status': newStatus});
+    await FirebaseFirestore.instance
+        .collection('venue')
+        .doc(venueId)
+        .collection('bookings')
+        .doc(bookingId)
+        .update({'status': newStatus});
     _fetchAllBookings();
   }
 
@@ -127,7 +112,7 @@ class _ManageUserReservationsState extends State<ManageUserReservations> {
                           children: [
                             Text('Venue: ${booking['venueName']}', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                             SizedBox(height: 5),
-                            Text( 'Date: ${booking['date']}', style: TextStyle(fontSize: 16)),
+                            Text('Date: ${booking['date']}', style: TextStyle(fontSize: 16)),
                             SizedBox(height: 5),
                             Text('Email: ${booking['userName']}', style: TextStyle(fontSize: 16)),
                             SizedBox(height: 5),

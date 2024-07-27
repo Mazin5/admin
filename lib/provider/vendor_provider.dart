@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_database/firebase_database.dart';
 
 class VendorProvider with ChangeNotifier {
   List<Map<String, dynamic>> _vendors = [];
@@ -25,13 +24,14 @@ class VendorProvider with ChangeNotifier {
         String uid = doc.id;
         Map<String, dynamic> vendorData = doc.data() as Map<String, dynamic>;
 
-        // Fetch service details from Realtime Database
-        DatabaseReference serviceRef = FirebaseDatabase.instance.reference().child(vendorData['serviceType']).child(uid);
-        DatabaseEvent event = await serviceRef.once();
-        DataSnapshot serviceSnapshot = event.snapshot;
+        // Fetch service details from Firestore
+        DocumentSnapshot serviceDoc = await FirebaseFirestore.instance
+            .collection(vendorData['serviceType'])
+            .doc(uid)
+            .get();
 
-        if (serviceSnapshot.value != null) {
-          Map<String, dynamic> serviceData = Map<String, dynamic>.from(serviceSnapshot.value as Map<dynamic, dynamic>);
+        if (serviceDoc.exists) {
+          Map<String, dynamic> serviceData = serviceDoc.data() as Map<String, dynamic>;
           vendors.add({
             'uid': uid,
             'vendorData': vendorData,
@@ -52,9 +52,8 @@ class VendorProvider with ChangeNotifier {
       // Update status in Firestore
       await FirebaseFirestore.instance.collection('vendors').doc(uid).update({'status': newStatus});
 
-      // Update status in Realtime Database
-      DatabaseReference serviceRef = FirebaseDatabase.instance.reference().child(serviceType).child(uid);
-      await serviceRef.update({'status': newStatus});
+      // Update status in the service collection in Firestore
+      await FirebaseFirestore.instance.collection(serviceType).doc(uid).update({'status': newStatus});
       
       // Refresh vendors list
       fetchVendors();

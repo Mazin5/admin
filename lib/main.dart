@@ -1,3 +1,5 @@
+import 'package:admin/admin_home_page.dart';
+import 'package:admin/provider/notification_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -18,6 +20,7 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => VendorProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
       ],
       child: MyApp(),
     ),
@@ -31,58 +34,6 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   @override
-  void initState() {
-    super.initState();
-    _initializeFCM();
-  }
-
-  void _initializeFCM() async {
-    FirebaseMessaging _messaging = FirebaseMessaging.instance;
-
-    // Request permissions for iOS
-    NotificationSettings settings = await _messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      print('User granted permission');
-      _getToken();
-    } else {
-      print('User declined or has not accepted permission');
-    }
-
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      print('Received a message in the foreground!');
-      print('Message data: ${message.data}');
-      if (message.notification != null) {
-        print('Message also contained a notification: ${message.notification}');
-      }
-    });
-
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      print('Message clicked!');
-    });
-  }
-
-  void _getToken() async {
-    FirebaseMessaging _messaging = FirebaseMessaging.instance;
-    String? token = await _messaging.getToken();
-    print('FCM Token: $token');
-
-    final FirebaseAuth _auth = FirebaseAuth.instance;
-   String? adminId= _auth.currentUser?.uid;
-
-
-    // Save the token to Firestore
-    if (token != null) {
-      await FirebaseFirestore.instance.collection('admins').doc(adminId).set({'token': token},SetOptions(merge: true));
-
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'EventPerfect Admin',
@@ -90,6 +41,9 @@ class _MyAppState extends State<MyApp> {
         primarySwatch: Colors.blue,
       ),
       home: AdminLoginPage(),
+      routes: {
+        AdminHomePage.routeName: (ctx) => AdminHomePage(),
+      },
     );
   }
 }

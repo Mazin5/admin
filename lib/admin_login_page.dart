@@ -22,22 +22,30 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
       });
 
       try {
-        UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        UserCredential userCredential =
+            await FirebaseAuth.instance.signInWithEmailAndPassword(
           email: _emailController.text,
           password: _passwordController.text,
         );
 
-        DocumentSnapshot adminDoc = await FirebaseFirestore.instance.collection('admins').doc(userCredential.user!.uid).get();
+        DocumentSnapshot adminDoc = await FirebaseFirestore.instance
+            .collection('admins')
+            .doc(userCredential.user!.uid)
+            .get();
         if (adminDoc.exists) {
           // Navigate to the admin home screen
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => AdminHomePage()));
+
+          Navigator.pushReplacement(context,
+              MaterialPageRoute(builder: (context) => AdminHomePage()));
         } else {
           // If the user is not an admin, sign them out
           await FirebaseAuth.instance.signOut();
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No admin account found for this email.')));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('No admin account found for this email.')));
         }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Login failed: $e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Login failed: $e')));
       } finally {
         setState(() {
           _isLoading = false;
@@ -48,12 +56,13 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
 
   final InputDecoration textFieldDecoration = InputDecoration(
     labelStyle: TextStyle(color: Colors.white), // Set label text color to white
-    hintStyle: TextStyle(color: Colors.white),  // Set hint text color to white
+    hintStyle: TextStyle(color: Colors.white), // Set hint text color to white
     enabledBorder: OutlineInputBorder(
       borderSide: BorderSide(color: Colors.white), // Set border color to white
     ),
     focusedBorder: OutlineInputBorder(
-      borderSide: BorderSide(color: Colors.white), // Set border color to white when focused
+      borderSide: BorderSide(
+          color: Colors.white), // Set border color to white when focused
     ),
     errorStyle: TextStyle(color: Colors.red), // Optionally set error text color
   );
@@ -115,14 +124,16 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                     controller: _emailController,
                     labelText: 'Email',
                     obscureText: false,
-                    validator: (value) => value!.isEmpty ? 'Please enter an email' : null,
+                    validator: (value) =>
+                        value!.isEmpty ? 'Please enter an email' : null,
                   ),
                   SizedBox(height: 16),
                   _buildTextField(
                     controller: _passwordController,
                     labelText: 'Password',
                     obscureText: true,
-                    validator: (value) => value!.isEmpty ? 'Please enter a password' : null,
+                    validator: (value) =>
+                        value!.isEmpty ? 'Please enter a password' : null,
                   ),
                   SizedBox(height: 32),
                   _isLoading
@@ -131,8 +142,10 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                           onPressed: _login,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white,
-                            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                            textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 24, vertical: 12),
+                            textStyle: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold),
                           ),
                           child: Text('Login'),
                         ),

@@ -1,11 +1,16 @@
+import 'package:admin/provider/notification_provider.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 import 'admin_login_page.dart';
 import 'manage_vendor_service.dart';
 import 'manage_user_reservations.dart';
 import 'view_payments_screen.dart';
 
 class AdminHomePage extends StatefulWidget {
+  static const routeName = '/home-screen';
+
   @override
   _AdminHomePageState createState() => _AdminHomePageState();
 }
@@ -27,6 +32,15 @@ class _AdminHomePageState extends State<AdminHomePage> {
   }
 
   @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    final notificationProvider =
+        Provider.of<NotificationProvider>(context, listen: false);
+    notificationProvider.initializeFCM();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -35,6 +49,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
           IconButton(
             icon: Icon(Icons.logout),
             onPressed: () async {
+              await FirebaseMessaging.instance.unsubscribeFromTopic('admin');
               await FirebaseAuth.instance.signOut();
               Navigator.of(context).pushReplacement(
                 MaterialPageRoute(builder: (context) => AdminLoginPage()),

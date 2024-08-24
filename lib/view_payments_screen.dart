@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ViewPaymentsScreen extends StatefulWidget {
@@ -105,7 +106,25 @@ class _ViewPaymentsScreenState extends State<ViewPaymentsScreen> {
           .doc(date);
       await reservedRef.delete();
     }
+    late String title, body;
+    if (newStatus == 'confirmed') {
+      title = "Your Reservation has been confirmed";
+      body = "Your Reservation has been confirmed";
+    } else {
+      title = "Your Reservation has been rejected";
+      body = "Your Reservation has been rejected";
+    }
 
+    final userData = await bookingRef.get();
+
+    HttpsCallable callable =
+        FirebaseFunctions.instance.httpsCallable('sendUserNotification');
+    await callable.call(<String, dynamic>{
+      'title': title,
+      'body': body,
+      'uid': userData['userId'],
+    });
+    print('userId: ${userData["userId"]}');
     _fetchAllPayments();
   }
 

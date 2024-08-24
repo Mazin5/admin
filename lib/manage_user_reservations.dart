@@ -20,23 +20,33 @@ class _ManageUserReservationsState extends State<ManageUserReservations> {
   Future<void> _fetchAllBookings() async {
     try {
       List<Map<String, dynamic>> tempBookings = [];
-      QuerySnapshot venuesSnapshot = await FirebaseFirestore.instance.collection('venue').get();
+      QuerySnapshot venuesSnapshot =
+          await FirebaseFirestore.instance.collection('venue').get();
 
       for (var venueDoc in venuesSnapshot.docs) {
-        QuerySnapshot bookingsSnapshot = await venueDoc.reference.collection('bookings').get();
+        QuerySnapshot bookingsSnapshot =
+            await venueDoc.reference.collection('bookings').get();
         for (var bookingDoc in bookingsSnapshot.docs) {
-          Map<String, dynamic> bookingData = bookingDoc.data() as Map<String, dynamic>;
+          Map<String, dynamic> bookingData =
+              bookingDoc.data() as Map<String, dynamic>;
           bookingData['bookingId'] = bookingDoc.id;
           bookingData['venueId'] = venueDoc.id;
-          bookingData['venueName'] = venueDoc['name']; // Assuming 'name' is the field for venue name
+          bookingData['venueName'] =
+              venueDoc['name']; // Assuming 'name' is the field for venue name
 
           // Fetch user data from the 'users' collection in Firestore
-          DocumentSnapshot userSnapshot = await FirebaseFirestore.instance.collection('users').doc(bookingData['userId']).get();
+          DocumentSnapshot userSnapshot = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(bookingData['userId'])
+              .get();
 
           if (userSnapshot.exists) {
-            Map<String, dynamic> userData = userSnapshot.data() as Map<String, dynamic>;
-            bookingData['userName'] = userData['email']; // Assuming 'email' is the field for user's email
-            bookingData['userFullName'] = userData['name']; // Assuming 'name' is the field for user's full name
+            Map<String, dynamic> userData =
+                userSnapshot.data() as Map<String, dynamic>;
+            bookingData['userName'] = userData[
+                'email']; // Assuming 'email' is the field for user's email
+            bookingData['userFullName'] = userData[
+                'name']; // Assuming 'name' is the field for user's full name
           }
 
           tempBookings.add(bookingData);
@@ -54,7 +64,8 @@ class _ManageUserReservationsState extends State<ManageUserReservations> {
     }
   }
 
-  Future<void> _updateBookingStatus(String venueId, String bookingId, String newStatus) async {
+  Future<void> _updateBookingStatus(
+      String venueId, String bookingId, String newStatus) async {
     await FirebaseFirestore.instance
         .collection('venue')
         .doc(venueId)
@@ -88,7 +99,8 @@ class _ManageUserReservationsState extends State<ManageUserReservations> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => ArchivedReservationsScreen()),
+                MaterialPageRoute(
+                    builder: (context) => ArchivedReservationsScreen()),
               );
             },
           )
@@ -110,28 +122,36 @@ class _ManageUserReservationsState extends State<ManageUserReservations> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Venue: ${booking['venueName']}', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                            Text('Venue: ${booking['venueName']}',
+                                style: TextStyle(
+                                    fontSize: 18, fontWeight: FontWeight.bold)),
                             SizedBox(height: 5),
-                            Text('Date: ${booking['date']}', style: TextStyle(fontSize: 16)),
+                            Text('Date: ${booking['date']}',
+                                style: TextStyle(fontSize: 16)),
                             SizedBox(height: 5),
-                            Text('Email: ${booking['userName']}', style: TextStyle(fontSize: 16)),
+                            Text('Email: ${booking['userName']}',
+                                style: TextStyle(fontSize: 16)),
                             SizedBox(height: 5),
-                            Text('Full Name: ${booking['userFullName']}', style: TextStyle(fontSize: 16)),
+                            Text('Full Name: ${booking['userFullName']}',
+                                style: TextStyle(fontSize: 16)),
                             SizedBox(height: 5),
-                            Text('Status: ${booking['status']}', style: TextStyle(fontSize: 16)),
+                            Text('Status: ${booking['status']}',
+                                style: TextStyle(fontSize: 16)),
                             SizedBox(height: 10),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 ElevatedButton(
                                   onPressed: () {
-                                    _updateBookingStatus(booking['venueId'], booking['bookingId'], 'confirmed');
+                                    _updateBookingStatus(booking['venueId'],
+                                        booking['bookingId'], 'confirmed');
                                   },
                                   child: Text('Confirm'),
                                 ),
                                 ElevatedButton(
                                   onPressed: () {
-                                    _updateBookingStatus(booking['venueId'], booking['bookingId'], 'declined');
+                                    _updateBookingStatus(booking['venueId'],
+                                        booking['bookingId'], 'declined');
                                   },
                                   child: Text('Decline'),
                                 ),

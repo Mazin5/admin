@@ -14,10 +14,10 @@ class VendorProvider with ChangeNotifier {
     List<Map<String, dynamic>> vendors = [];
 
     try {
-      // Fetch vendors from Firestore with status 'pending' or 'verified'
+      // Fetch vendors from Firestore with status 'pending', 'verified', or 'pending_update'
       QuerySnapshot snapshot = await FirebaseFirestore.instance
           .collection('vendors')
-          .where('status', whereIn: ['pending', 'verified'])
+          .where('status', whereIn: ['pending', 'verified', 'pending_update'])
           .get();
 
       for (var doc in snapshot.docs) {

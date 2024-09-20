@@ -1,5 +1,4 @@
 import 'package:admin/ManageReservationsWithPayments.dart';
-import 'package:admin/view_payments_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -22,9 +21,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
   // Define a list of widget options for navigation
   static List<Widget> _widgetOptions = <Widget>[
     ManageVendorService(),
-    ViewPaymentsScreen(),
     ManageReservationsWithPayments(),
-
   ];
 
   void _onItemTapped(int index) {
@@ -76,10 +73,6 @@ class _AdminHomePageState extends State<AdminHomePage> {
           BottomNavigationBarItem(
             icon: Icon(Icons.store_mall_directory),
             label: 'Vendors',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.book_online),
-            label: 'test',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.book_online),

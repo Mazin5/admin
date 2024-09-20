@@ -14,6 +14,7 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
   final TextEditingController _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
+  bool _obscureText = true; // For password visibility toggle
 
   Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
@@ -22,22 +23,33 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
       });
 
       try {
-        UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-          email: _emailController.text,
-          password: _passwordController.text,
+        UserCredential userCredential =
+            await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
         );
 
-        DocumentSnapshot adminDoc = await FirebaseFirestore.instance.collection('admins').doc(userCredential.user!.uid).get();
+        DocumentSnapshot adminDoc = await FirebaseFirestore.instance
+            .collection('admins')
+            .doc(userCredential.user!.uid)
+            .get();
         if (adminDoc.exists) {
           // Navigate to the admin home screen
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => AdminHomePage()));
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => AdminHomePage()),
+          );
         } else {
           // If the user is not an admin, sign them out
           await FirebaseAuth.instance.signOut();
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No admin account found for this email.')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('No admin account found for this email.')),
+          );
         }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Login failed: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Login failed: $e')),
+        );
       } finally {
         setState(() {
           _isLoading = false;
@@ -46,99 +58,139 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
     }
   }
 
-  final InputDecoration textFieldDecoration = InputDecoration(
-    labelStyle: TextStyle(color: Colors.white), // Set label text color to white
-    hintStyle: TextStyle(color: Colors.white),  // Set hint text color to white
-    enabledBorder: OutlineInputBorder(
-      borderSide: BorderSide(color: Colors.white), // Set border color to white
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderSide: BorderSide(color: Colors.white), // Set border color to white when focused
-    ),
-    errorStyle: TextStyle(color: Colors.red), // Optionally set error text color
-  );
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String labelText,
-    required bool obscureText,
-    required String? Function(String?) validator,
-  }) {
-    return TextFormField(
-      controller: controller,
-      decoration: textFieldDecoration.copyWith(labelText: labelText),
-      obscureText: obscureText,
-      style: TextStyle(color: Colors.white), // Set input text color to white
-      validator: validator,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
+    // Define your color scheme
+    final Color primaryColor = Color(0xFF0A73B7);
+    final Color accentColor = Color(0xFF00A859);
+
     return Scaffold(
-      backgroundColor: Color.fromARGB(154, 168, 33, 53),
+      backgroundColor: Colors.white,
       body: Center(
         child: SingleChildScrollView(
-          child: Container(
-            padding: const EdgeInsets.all(16.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Image.network(
-                    'https://i.ibb.co/P5xhDMx/admin.png',
-                    width: 200,
-                    height: 200,
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    "WELCOME BACK",
-                    style: GoogleFonts.roboto(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    "LOGIN",
-                    style: GoogleFonts.roboto(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  SizedBox(height: 32),
-                  _buildTextField(
-                    controller: _emailController,
-                    labelText: 'Email',
-                    obscureText: false,
-                    validator: (value) => value!.isEmpty ? 'Please enter an email' : null,
-                  ),
-                  SizedBox(height: 16),
-                  _buildTextField(
-                    controller: _passwordController,
-                    labelText: 'Password',
-                    obscureText: true,
-                    validator: (value) => value!.isEmpty ? 'Please enter a password' : null,
-                  ),
-                  SizedBox(height: 32),
-                  _isLoading
-                      ? Center(child: CircularProgressIndicator())
-                      : ElevatedButton(
-                          onPressed: _login,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                            textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                          ),
-                          child: Text('Login'),
-                        ),
-                ],
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Logo or Illustration
+              Image.network(
+                'https://i.ibb.co/P5xhDMx/admin.png',
+                width: 150,
+                height: 150,
               ),
-            ),
+              SizedBox(height: 32),
+              // Welcome Text
+              Text(
+                "Welcome Back, Admin",
+                style: GoogleFonts.roboto(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: primaryColor,
+                ),
+              ),
+              SizedBox(height: 16),
+              // Form
+              Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    // Email Field
+                    TextFormField(
+                      controller: _emailController,
+                      decoration: InputDecoration(
+                        labelText: 'Email Address',
+                        prefixIcon: Icon(Icons.email, color: primaryColor),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: primaryColor),
+                          borderRadius: BorderRadius.circular(12.0),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.grey.shade400),
+                          borderRadius: BorderRadius.circular(12.0),
+                        ),
+                      ),
+                      keyboardType: TextInputType.emailAddress,
+                      validator: (value) =>
+                          value!.isEmpty ? 'Please enter your email' : null,
+                    ),
+                    SizedBox(height: 16),
+                    // Password Field
+                    TextFormField(
+                      controller: _passwordController,
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        prefixIcon: Icon(Icons.lock, color: primaryColor),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscureText
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                            color: primaryColor,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscureText = !_obscureText;
+                            });
+                          },
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: primaryColor),
+                          borderRadius: BorderRadius.circular(12.0),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.grey.shade400),
+                          borderRadius: BorderRadius.circular(12.0),
+                        ),
+                      ),
+                      obscureText: _obscureText,
+                      validator: (value) =>
+                          value!.isEmpty ? 'Please enter your password' : null,
+                    ),
+                    SizedBox(height: 24),
+                    // Login Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _login,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryColor,
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.0),
+                          ),
+                        ),
+                        child: _isLoading
+                            ? CircularProgressIndicator(
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                              )
+                            : Text(
+                                'Login',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.white,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 16),
+              // Forgot Password Link (Optional)
+              TextButton(
+                onPressed: () {
+                  // Implement forgot password functionality
+                },
+                child: Text(
+                  'Forgot Password?',
+                  style: TextStyle(
+                    color: primaryColor,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
